@@ -1,0 +1,8 @@
+{
+  "appId": "com.starlux.ventas",
+  "appName": "Star Lux",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#fdf5f8"
+  }
+}
