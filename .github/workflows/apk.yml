@@ -1,0 +1,67 @@
+name: Construir APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Ordenar archivos
+        run: |
+          mkdir -p www assets
+          [ -f index.html ] && mv index.html www/ || true
+          for f in icon-only.png icon-foreground.png icon-background.png splash.png splash-dark.png; do [ -f "$f" ] && mv "$f" assets/ || true; done
+          ls -R www assets
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Crear proyecto Android
+        run: npx cap add android
+
+      - name: Generar ícono y pantalla de inicio
+        continue-on-error: true
+        run: npx capacitor-assets generate --android --iconBackgroundColor "#fdf5f8" --iconBackgroundColorDark "#1d1520" --splashBackgroundColor "#fdf5f8" --splashBackgroundColorDark "#1d1520"
+
+      - name: Copiar la app
+        run: npx cap sync android
+
+      - name: Compilar APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../StarLux.apk
+
+      - name: Guardar APK en Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: StarLux-apk
+          path: StarLux.apk
+
+      - name: Publicar descarga
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Star Lux 1.0.${{ github.run_number }}
+          body: Descarga StarLux.apk desde tu celular e instálala.
+          files: StarLux.apk
