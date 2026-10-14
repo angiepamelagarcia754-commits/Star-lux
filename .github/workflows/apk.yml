@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -25,9 +27,13 @@ jobs:
 
       - name: Ordenar archivos
         run: |
-          mkdir -p www assets
-          [ -f index.html ] && mv index.html www/ || true
-          for f in icon-only.png icon-foreground.png icon-background.png splash.png splash-dark.png; do [ -f "$f" ] && mv "$f" assets/ || true; done
+          mkdir -p www assets ~/.android
+          pick(){ best=""; bt=-1; for f in "$@"; do [ -f "$f" ] || continue; t=$(git log -1 --format=%ct -- "$f"); t=${t:-0}; if [ "$t" -ge "$bt" ]; then bt=$t; best="$f"; fi; done; echo "$best"; }
+          f=$(pick index*.html); echo "App: $f"; cp "$f" www/index.html
+          p=$(pick package*.json); echo "package: $p"; if [ -n "$p" ] && [ "$p" != "package.json" ]; then cp "$p" package.json; fi
+          for n in icon-only icon-foreground icon-background splash-dark; do f=$(pick $n*.png); echo "$n: $f"; if [ -n "$f" ]; then cp "$f" assets/$n.png; fi; done
+          f=$(pick $(ls splash*.png 2>/dev/null | grep -v '^splash-dark')); echo "splash: $f"; if [ -n "$f" ]; then cp "$f" assets/splash.png; fi
+          k=$(pick *.keystore); echo "llave: $k"; if [ -n "$k" ]; then cp "$k" ~/.android/debug.keystore; fi
           ls -R www assets
 
       - name: Instalar dependencias
